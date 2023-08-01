@@ -917,9 +917,10 @@ def codex_helper(extended_prompt):
     assert 0 <= config.codex.temperature <= 1
     assert 1 <= config.codex.best_of <= 20
 
-    if config.codex.model in ("gpt-4", "gpt-3.5-turbo"):
+    if config.codex.model in ("gpt-4", "gpt-3.5-turbo", "gpt-3.5-turbo-16k"):
         if not isinstance(extended_prompt, list):
             extended_prompt = [extended_prompt]
+        import IPython; IPython.embed(); input('Query...')
         responses = [openai.ChatCompletion.create(
                 model=config.codex.model,
                 messages=[

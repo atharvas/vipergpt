@@ -173,6 +173,7 @@ def main():
                     codes = codes_all[i * batch_size:(i + 1) * batch_size]  # If cache
 
                 # Run the code
+                import IPython; IPython.embed(); input('Press enter to continue...')
                 if config.execute_code:
                     if not config.multiprocessing:
                         # Otherwise, we would create a new model for every process

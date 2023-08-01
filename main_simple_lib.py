@@ -254,7 +254,7 @@ def load_image(path):
 
 def get_code(query):
     code = forward('codex', prompt=query, input_type="image")
-    if config.codex.model not in ('gpt-3.5-turbo', 'gpt-4'):
+    if config.codex.model not in ('gpt-3.5-turbo', 'gpt-4', 'gpt-3.5-turbo-16k'):
         code = f'def execute_command(image, my_fig, time_wait_between_lines, syntax):' + code # chat models give execute_command due to system behaviour
     code_for_syntax = code.replace("(image, my_fig, time_wait_between_lines, syntax)", "(image)")
     syntax_1 = Syntax(code_for_syntax, "python", theme="monokai", line_numbers=True, start_line=0)
