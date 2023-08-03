@@ -8,6 +8,7 @@ dataset:                                            # Dataset configuration
     max_samples: 100                                # Maximum number of samples to load
     batch_size: 20                                  # Batch size
     start_sample: 0                                 # Start sample index. Only used if max_samples is not None
+    queries_csv: 'queries.csv'                      # Path to the queries csv file
 
 load_models:                                        # Which pretrained models to load
     maskrcnn: False

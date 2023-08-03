@@ -30,9 +30,14 @@ class MyDataset(Dataset):
         self.image_transforms = image_transforms
         self.fps = fps
         self.max_num_frames = max_num_frames
-
+        if 'queries_csv' not in kwargs:
+            csv_pth = self.data_path / self.split / 'queries.csv'
+        else:
+            csv_pth = self.data_path / self.split / kwargs['queries_csv']
+        
+        assert csv_pth.exists(), f"CSV file {csv_pth} does not exist"
         # Load questions, answers, and image ids
-        with open(self.data_path / self.split / 'queries.csv', 'r') as f:
+        with open(csv_pth, 'r') as f:
             # The csv has the rows [query, answer, image_name or video_name]
             self.df = pd.read_csv(f, index_col=None, keep_default_na=False)
 
