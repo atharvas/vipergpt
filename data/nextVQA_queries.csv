@@ -1,0 +1,11 @@
+index,sample_id,possible_answers,query_type,query,answer,video_name
+14,14,house kitchen stage ballroom train,,Where is this video taken?,house,nextVQA/1120/3229982634.mp4
+20,20,playground sea zoo boxing ring road,,Where is this video taken?,road,nextVQA/1005/6217597005.mp4
+34,34,garden field dinning table along the streets lake,,Where is this video taken?,garden,nextVQA/1024/9337790459.mp4
+40,40,wall table beach floor screen,,Where is the boy projecting his photos on?,screen,nextVQA/1165/7843288978.mp4
+63,63,bus terminal outdoors kitchen house waterfall,,Where is this place?,house,nextVQA/1014/3552516882.mp4
+96,96,karaoke room hiking trail kitchen cycling trail room,,Where is this happening?,kitchen,nextVQA/0046/2399344595.mp4
+112,112,near a lake outdoor in the sea river trail,,Where is this happening?,near a lake,nextVQA/1006/2782675613.mp4
+122,122,dance hall office grassland bedroom classroom,,Where are the people attending the event?,classroom,nextVQA/1002/6096540713.mp4
+143,143,garden living room farm shop outside the house,,Where could this be happening?,outside the house,nextVQA/0101/2909445186.mp4
+150,150,classroom roadside kitchen by a lake work place,,Where is this happening?,kitchen,nextVQA/1001/6512025357.mp4

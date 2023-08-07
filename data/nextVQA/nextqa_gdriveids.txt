@@ -1,0 +1,9 @@
+1NFAOQYZ-D0LOpcny8fm0fSzLvN0tNR2A map_vid_vidorID.json
+1MH_zQ2oJBDxCXL5g7BStK1QK4L3tr0cP models.zip
+1XjFbiqCVZnALJa4kEb7lBxLVizt3RzAj nextqa.zip
+1jTcRCrVHS66ckOUfWRb-rXdzJ52XAWQH NExTVideo.zip
+1_wwJrB7r974Eq3VkXUnUlPhBwQRDLMbZ pytorch-pretrained-BERT.zip
+1KtpduE0SViUYFjZq81hlSmgEr7e2QrUa qas_bert.zip
+1l1VdNgQiltaJjSmg9QkcxDWbwXXwnIMH relation_annotation_nextqa.zip
+1_MEqDeQHc8Y8Uw7eW58HVuZy2iyThILQ test-data-nextqa.zip
+1rS5X_t_VSDF4uP3HL1gPQ0ZgWIEuglgk vid_feat.zip
