@@ -310,6 +310,135 @@ class CLIPModel(BaseModel):
             out = out.cpu()
         return out
 
+class FinetunedSatelliteCLIPModel(BaseModel):
+    name = 'geospatial_clip'
+
+    def __init__(self, gpu_number=0, version="flax-community/clip-rsicd-v2"):  # @336px
+        super().__init__(gpu_number)
+        with HiddenPrints('SAT_CLIP'):
+            from transformers import CLIPProcessor, CLIPModel
+            model = CLIPModel.from_pretrained(version)
+            processor = CLIPProcessor.from_pretrained(version)
+            model.eval()
+            model.requires_grad_ = False
+        self.model = model
+        self.processor = processor
+        self.transform = transforms.Compose([ # CLIPProcessor handles internal transforms
+            transforms.ToTensor(),
+        ])
+
+    @torch.no_grad()
+    def binary_score(self, image: torch.Tensor, prompt, negative_categories=None):
+        is_video = isinstance(image, torch.Tensor) and image.ndim == 4
+        if is_video:  # video
+            image = torch.stack([self.transform(image[i]) for i in range(image.shape[0])], dim=0)
+        else:
+            image = self.transform(image).unsqueeze(0).to(self.dev)
+
+        prompt_prefix = "photo of "
+        prompt = prompt_prefix + prompt
+    
+        if negative_categories is None:
+            with open('useful_lists/random_negatives.txt') as f:
+                negative_categories = [x.strip() for x in f.read().split()]
+        negative_categories = [prompt_prefix + x for x in negative_categories]
+        inputs = self.processor(text=[prompt] + negative_categories, images=image, return_tensors="pt", padding=True)
+        outputs = self.model(**inputs)
+        logits_per_image = outputs.logits_per_image
+        # probs = logits_per_image.softmax(dim=1).squeeze(-2)
+        probs = (100 * logits_per_image).softmax(dim=1).squeeze(-2)
+        if is_video:
+            query = probs[0, 0].unsqueeze(-1).broadcast_to(probs.shape[0], probs.shape[-1] - 1)
+            others = probs[..., 1:]
+            res = F.softmax(torch.stack([query, others], dim=-1), dim=-1)[..., 0].mean(-1)
+        else:
+            probs = probs.squeeze(0)
+            res = F.softmax(torch.cat((probs[0].broadcast_to(1, probs.shape[0] - 1),
+                                       probs[1:].unsqueeze(0)), dim=0), dim=0)[0].mean()
+        return res
+
+    @torch.no_grad()
+    def classify(self, image: Union[torch.Tensor, list], categories: list[str], return_index=True):
+        is_list = isinstance(image, list)
+        if is_list:
+            assert len(image) == len(categories)
+            image = [self.transform(x).unsqueeze(0) for x in image]
+            image_clip = torch.cat(image, dim=0).to(self.dev)
+        elif len(image.shape) == 3:
+            image_clip = self.transform(image).to(self.dev).unsqueeze(0)
+        else:  # Video (process images separately)
+            image_clip = torch.stack([self.transform(x) for x in image], dim=0).to(self.dev)
+
+        # if len(image_clip.shape) == 3:
+        #     image_clip = image_clip.unsqueeze(0)
+
+        prompt_prefix = "photo of "
+        categories = [prompt_prefix + x for x in categories]
+        inputs = self.processor(text=categories, images=image_clip, return_tensors="pt", padding=True)
+        outputs = self.model(**inputs)
+        logits_per_image = outputs.logits_per_image
+        similarity = (100 * logits_per_image).softmax(dim=1).squeeze(-2)
+
+        # categories = self.clip.tokenize(categories).to(self.dev)
+
+
+        # text_features = self.model.encode_text(categories)
+        # text_features = F.normalize(text_features, dim=-1)
+
+        # image_features = self.model.encode_image(image_clip)
+        # image_features = F.normalize(image_features, dim=-1)
+
+        # if image_clip.shape[0] == 1:
+        #     # get category from image
+        #     softmax_arg = image_features @ text_features.T  # 1 x n
+        # else:
+        #     if is_list:
+        #         # get highest category-image match with n images and n corresponding categories
+        #         softmax_arg = (image_features @ text_features.T).diag().unsqueeze(0)  # n x n -> 1 x n
+        #     else:
+        #         softmax_arg = (image_features @ text_features.T)
+
+        # similarity = (100.0 * softmax_arg).softmax(dim=-1).squeeze(0)
+        if not return_index:
+            return similarity
+        else:
+            result = torch.argmax(similarity, dim=-1)
+            if result.shape == ():
+                result = result.item()
+            return result
+
+    @torch.no_grad()
+    def compare(self, images: list[torch.Tensor], prompt, return_scores=False):
+        images = [self.transform(im).unsqueeze(0).to(self.dev) for im in images]
+        images = torch.cat(images, dim=0)
+
+        prompt_prefix = "photo of "
+        prompt = prompt_prefix + prompt
+
+        inputs = self.processor(text=[prompt], images=images, return_tensors="pt", padding=True)
+        outputs = self.model(**inputs)
+        logits_per_image = outputs.logits_per_image
+        sim = (logits_per_image).softmax(dim=0).squeeze() # Only one text, so squeeze
+
+        if return_scores:
+            return sim
+        res = sim.argmax()
+        return res
+
+    def forward(self, image, prompt, task='score', return_index=True, negative_categories=None, return_scores=False):
+        if task == 'classify':
+            categories = prompt
+            clip_sim = self.classify(image, categories, return_index=return_index)
+            out = clip_sim
+        elif task == 'score':
+            clip_score = self.binary_score(image, prompt, negative_categories=negative_categories)
+            out = clip_score
+        else:  # task == 'compare'
+            idx = self.compare(image, prompt, return_scores)
+            out = idx
+        if not isinstance(out, int):
+            out = out.cpu()
+        return out
 
 class MaskRCNNModel(BaseModel):
     name = 'maskrcnn'

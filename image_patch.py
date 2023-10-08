@@ -200,6 +200,21 @@ class ImagePatch:
     def _detect(self, category: str, thresh, negative_categories=None, model='clip') -> bool:
         return self._score(category, negative_categories, model) > thresh
 
+    def _score_geospatial(self, category: str, negative_categories=None, model='geospatial_clip') -> float:
+        """
+        Returns a binary score for the similarity between the image and the category.
+        The negative categories are used to compare to (score is relative to the scores of the negative categories).
+        """
+        if model == 'geospatial_clip':
+            res = self.forward('geospatial_clip', self.cropped_image, category, task='score',
+                               negative_categories=negative_categories)
+        else:
+            raise NotImplementedError
+        return res
+
+    def _detect_geospatial(self, category: str, thresh, negative_categories=None, model='geospatial_clip') -> bool:
+        return self._score(category, negative_categories, model) > thresh
+
     def verify_property(self, object_name: str, attribute: str) -> bool:
         """Returns True if the object possesses the property, and False otherwise.
         Differs from 'exists' in that it presupposes the existence of the object specified by object_name, instead
@@ -222,6 +237,24 @@ class ImagePatch:
         else:  # 'xvlm'
             return self._detect(name, negative_categories=negative_categories,
                                 thresh=config.verify_property.thresh_xvlm, model='xvlm')
+
+    def verify_property_geospatial(self, object_name: str, attribute: str) -> bool:
+        """Returns True if the object possesses the property, and False otherwise.
+        Differs from 'exists' in that it presupposes the existence of the object specified by object_name, instead
+        checking whether the object possesses the property.
+        This calls a specialized model for geospatial images. It is not a general purpose model and will fail on
+        non-geospatial images.
+        Parameters
+        -------
+        object_name : str
+            A string describing the name of the object to be found in the image.
+        attribute : str
+            A string describing the property to be checked.
+        """
+        name = f"{attribute} {object_name}"
+        negative_categories = [f"{att} {object_name}" for att in self.possible_options['attributes']]
+        return self._detect_geospatial(name, negative_categories=negative_categories,
+                            thresh=config.verify_property.thresh_clip, model='geospatial_clip')
 
     def best_text_match(self, option_list: list[str] = None, prefix: str = None) -> str:
         """Returns the string that best matches the image.
@@ -248,6 +281,26 @@ class ImagePatch:
         else:
             raise NotImplementedError
 
+        return option_list[selected]
+
+    def best_text_match_geospatial(self, option_list: list[str] = None, prefix: str = None) -> str:
+        """Returns the string that best matches the geospatial image. This calls a specialized model for geospatial
+        images. It is not a general purpose model and will fail on non-geospatial images.
+        Parameters
+        -------
+        option_list : str
+            A list with the names of the different options
+        prefix : str
+            A string with the prefixes to append to the options
+        """
+        option_list_to_use = option_list
+        if prefix is not None:
+            option_list_to_use = [prefix + " " + option for option in option_list]
+
+        model_name = config.geospatial_model
+        image = self.cropped_image
+        text = option_list_to_use
+        selected = self.forward(model_name, image, text, task='classify')
         return option_list[selected]
 
     def simple_query(self, question: str):
@@ -376,6 +429,40 @@ def best_image_match(list_patches: list[ImagePatch], content: List[str], return_
         return scores
     return list_patches[scores]
 
+
+def best_image_match_geospatial(list_patches: list[ImagePatch], content: List[str], return_index: bool = False) -> \
+        Union[ImagePatch, None]:
+    """Returns the patch most likely to contain the content. This calls a specialized model for geospatial images. It
+    is not a general purpose model and will fail on non-geospatial images.
+    Parameters
+    ----------
+    list_patches : List[ImagePatch]
+    content : List[str]
+        the object of interest
+    return_index : bool
+        if True, returns the index of the patch most likely to contain the object
+
+    Returns
+    -------
+    int
+        Patch most likely to contain the object
+    """
+    if len(list_patches) == 0:
+        return None
+
+    model = 'geospatial_clip'
+
+    scores = []
+    for cont in content:
+        res = list_patches[0].forward('geospatial_clip', [p.cropped_image for p in list_patches], cont, task='compare',
+                                        return_scores=True)
+        scores.append(res)
+    scores = torch.stack(scores).mean(dim=0)
+    scores = scores.argmax().item()  # Argmax over all image patches
+
+    if return_index:
+        return scores
+    return list_patches[scores]
 
 def distance(patch_a: Union[ImagePatch, float], patch_b: Union[ImagePatch, float]) -> float:
     """
