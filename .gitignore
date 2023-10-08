@@ -5,6 +5,8 @@
 # gitignore template for Jupyter Notebooks
 # website: http://jupyter.org/
 
+data/
+
 .ipynb_checkpoints
 */.ipynb_checkpoints/*
 
@@ -186,6 +188,8 @@ poetry.toml
 !.vscode/launch.json
 !.vscode/extensions.json
 !.vscode/*.code-snippets
+data/newt
+data/videos
 
 # Local History for Visual Studio Code
 .history/
