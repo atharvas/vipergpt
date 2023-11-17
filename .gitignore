@@ -6,7 +6,12 @@
 # website: http://jupyter.org/
 
 data/
-
+*.pkl
+*.ckpt
+*.pt
+*.csv
+*.npz
+*.pth
 .ipynb_checkpoints
 */.ipynb_checkpoints/*
 

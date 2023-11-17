@@ -1440,3 +1440,34 @@ class XVLMModel(BaseModel):
         else:  # binary
             score = self.binary_score(image, text, negative_categories=negative_categories)
         return score.cpu()
+
+class NEWTFinetunedModel(BaseModel):
+    name = 'newt'
+    def __init__(self, gpu_number=0,
+                 path_checkpoint=f'{config.path_pretrained_models}/newt'):
+        import pickle
+        from newt.benchmark.construct_newt_classifiers import NEWTClassifers, PTResNet50FeatureExtractor
+        super().__init__(gpu_number)
+        with HiddenPrints("NEWT"):
+            tag = "inat2021_supervised"
+            resnet_feature_extractor = torch.load(os.path.join(path_checkpoint, f'{tag}_resnet50.pt'),
+                                                  map_location=torch.device(f'cuda:{self.dev}'))
+            with open(os.path.join(path_checkpoint, f'{tag}_sk_classifiers.pkl'), 'rb') as fp:
+                classifier_dict = pickle.load(fp)
+            model = NEWTClassifers(resnet_feature_extractor, classifier_dict, use_torch=True)
+            with open(os.path.join(path_checkpoint, 'task_label_mapping.pkl'), 'rb') as fp:
+                task_label_mapping = pickle.load(fp)
+            self.classes = task_label_mapping
+
+        model = model.to(self.dev)
+        model.eval()
+        self.model = model
+        self.transform = model.feature_extractor.transform
+
+    @torch.no_grad()
+    def forward(self, image, task_name):
+        assert task_name in self.classes.keys(), f"Task {task_name} not found in NEWT classes"
+        image_t = self.transform(image).unsqueeze(0).to(self.dev)
+        onehot_pred = self.model(image_t, task_name=task_name) # a floating point number.
+        cls_pred = self.classes[task_name][torch.argmax(onehot_pred).item()]
+        return cls_pred

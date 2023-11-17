@@ -1,0 +1,32 @@
+What is the pipeline:
+
+- Many datasets (like NeWT) follow this division: tasks -> yes/no labels -> images.
+    - For instance, in NeWT, we have 168 tasks of the form: swan_classifier -> tundra swan / Whooper swan -> ~100 images for each class
+- Our evaluation pipeline:
+    - Step 0: Setup a ViperGPT like API with general purpose models (GLIP).
+    - Step 1: Train a self-supervised resnet (MoCo/SimCLR) on all the images.
+    - Step 2: Pretrain classification heads (SVMs) for 0% / 50% / 100% of the tasks. Add these to the API.
+    - Step 3: During Inference (on NeWT test dataset):
+        - For each query/image, use the API (specialized and general purpose models) to answer question
+        - Receive user feedback.
+        - Based on the accuracy and whether we used a specialized model or not, add sample to training data of an existing task or create a new task. Retrain SVMs.
+        - Repeat.
+        - Measure model accuracy on test data against baseline consisting of no specialized functions.
+- Expectations:
+    - Specialized API + general purpose API should work better than just the general purpose API.
+    - Specifically, GP API + 100% SP API > GP API + 50% SP API > GP API + 0% SP API
+    - The gap between 100%/50%/0% should increase if we ablate Step 3 (ie: no updating).
+    - Accuracy should vary depending on program-retrieval technique:
+    - Ideally, retrieval based on learned KNN should be less accurate than retrieval using program summary.
+
+
+Code organization.
+- Select NeWT tasks. We will measure F score for each testing task.
+- start with `prompts/viper_general_purpose.prompt`
+    - Measure F1 score: __ F1 __ Precision __ Recall
+- For each task, modify the prompt to use specialized model for that task.
+    - Measure F1 score: __ F1 __ Precision __ Recall
+    - This is 100% pretrained with no selection.
+- TODO: How to turn this into an _active learning_ task?
+    - Retrieve using KNN vector database.
+    - Retrieve using programmatic retrieval.
